@@ -37,5 +37,18 @@ pub enum Operator {
     Plus,
 }
 
+impl Operator {
+    fn to_string(&self) -> String {
+        match self {
+            Operator::Equal => "Equal".to_string(),
+            Operator::NotEqual => "Not Equal".to_string(),
+            Operator::Greater => "Greater".to_string(),
+            Operator::Smaller => "Smaller".to_string(),
+            Operator::Plus => "Plus".to_string(),
+        }
+    }
+
+}
+
 
 
