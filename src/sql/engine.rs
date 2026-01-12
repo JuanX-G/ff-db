@@ -40,7 +40,7 @@ pub enum EngineError {
     UnexpectedExprExpectedLiteral(Expr),
     UnexpectedExprExpectedIdentifier(Expr),
     UnexpectedExprExpectedExpression(Expr),
-
+    UnexpectedState,
 }
 impl fmt::Display for EngineError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -66,6 +66,7 @@ impl fmt::Display for EngineError {
                 // TODO add proper string method on expr
                 out_s
             },
+            EngineError::UnexpectedState => "unexpected state encoutered".to_string(),
         })
     }
 }
@@ -133,7 +134,7 @@ impl Engine {
             Operator::Smaller => { 
                 match &left {
                     Expr::Binary {left: l, op: o, right: r} => {self.run_binary_expr(l, r, o)?;},
-                    Expr::Literal(_) => panic!("invalid use of literal"),
+                    Expr::Literal(_) => return Err(Box::new(EngineError::UnexpectedExprExpectedIdentifier(left.clone()))),
                     Expr::Identifier(i) => {
                         let where_cond = self.parse_where_condition(i, &op, right)?;
                         return Ok(SqlExpr::WhereCondition(where_cond))
@@ -142,39 +143,7 @@ impl Engine {
             },
             Operator::Plus => return Err(Box::new(EngineError::InvalidOperatorInWhere(op.clone()))),
         };
-        match left {
-            Expr::Binary {left: l, op: o, right: r} => {self.run_binary_expr(l, r, o)?;},
-            Expr::Literal(l) => left_val = l.clone(),
-            Expr::Identifier(_) => panic!("TODO: resolve identifiers"),
-        };
-        match right {
-            Expr::Binary {left: l, op: o, right: r} => {self.run_binary_expr(l, r, o)?;},
-            Expr::Literal(l) => right_val = l.clone(),
-            Expr::Identifier(_) => panic!("TODO: resolve identifiers"),
-        };
-        let mut val_n: i32 = 0;
-        let mut val_s: String = "".to_string();
-        let mut string: bool = false;
-        match op {
-            Operator::Equal => panic!("TODO: resolve onto a name"),
-            Operator::NotEqual => panic!("invalid use of not equal"),
-            Operator::Plus => match left_val {
-                Literal::Number(nl) => match right_val {
-                    Literal::Number(nr) => val_n = nr + nl,
-                    Literal::String(_) => panic!("Сannot add a Number and String"),
-                },
-                Literal::String(sl) => match right_val {
-                    Literal::Number(_) => panic!("Сannot add a String and Number"),
-                    Literal::String(sr) => {string = true; val_s.push_str(&sl); val_s.push_str(&sr)},
-                },
-            }
-            _ => panic!("invalid use of operator")
-        };
-        if string {
-            Ok(SqlExpr::Literal(Literal::String(val_s)))
-        } else {
-            Ok(SqlExpr::Literal(Literal::Number(val_n)))
-        }
+        Err(Box::new(EngineError::UnexpectedState))
     }
     pub fn run(&self, db: &mut DB) -> Result<QueryResult, Box<dyn std::error::Error>> {
         let statment = match &self.ast_root.first_node {
