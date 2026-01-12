@@ -108,17 +108,30 @@ impl Parser {
         self.expect(SqlToken::Keyword(SqlKeyword::From))?;
 
         let table = self.parse_identifier()?;
-        let where_clause = if self.current() == &SqlToken::Keyword(SqlKeyword::Where) {
-            self.advance(); 
-            Some(self.parse_expr()?)
+        let mut where_clauses: Vec<Expr> = vec![];
+        loop {
+            let where_clause = if self.current() == &SqlToken::Keyword(SqlKeyword::Where) || 
+                self.current() == &SqlToken::Keyword(SqlKeyword::And) {
+                self.advance(); 
+                match self.parse_expr() {
+                    Ok(wc) => wc,
+                    Err(_s) => break,
+                }
+            } else {
+                break;
+            };
+            where_clauses.push(where_clause);
+        }
+        let where_clauses = if where_clauses.len() < 1 {
+            Option::None
         } else {
-            None
+            Option::Some(where_clauses)
         };
 
         Ok(SelectStatement {
             columns,
             table,
-            where_clause,
+            where_clause: where_clauses,
         })
     }
     pub fn parse_insert(&mut self) -> Result<InsertStatement, String> {

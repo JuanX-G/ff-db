@@ -25,12 +25,15 @@ pub enum SqlKeyword {
     Into,
     Values,
     Where,
+    And,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Operator {
     Equal,
     NotEqual,
+    Greater,
+    Smaller,
     Plus,
 }
 

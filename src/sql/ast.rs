@@ -33,7 +33,7 @@ pub struct InsertStatement {
 pub struct SelectStatement {
     pub columns: Vec<String>,
     pub table: String,
-    pub where_clause: Option<Expr>,
+    pub where_clause: Option<Vec<Expr>>,
 }
 #[derive(Debug)]
 pub struct ASTRootWrapper {

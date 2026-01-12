@@ -1,12 +1,5 @@
 num: INT, name: TEXT
-1, als
-1, als
-1, als
-3
-3
-0, pib
-0, pib
-6, 
-6, 
-6, 
+1, guy
+2, bro
+3, gal
 

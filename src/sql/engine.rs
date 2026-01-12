@@ -1,5 +1,7 @@
-use std::error::Error;
-use crate::{DB, DBField, sql::{Operator, ast::{ASTNode, ASTRootWrapper, Expr, Literal, Statement}}};
+use crate::{sql::{Operator, ast::{ASTNode, ASTRootWrapper, Expr, Literal, Statement}}};
+use crate::database::database::*;
+
+#[derive(Debug)]
 pub struct Engine {
     pub ast_root: ASTRootWrapper,
 }
@@ -10,23 +12,107 @@ pub enum QueryResult {
 }
 
 
-/*      ## TODO for run_expr ##
- *      When op == equals
- *          reesolve a columns name table, get columsn names, and return a where clause struct
- * */
+#[derive(Debug)]
+pub enum WhereOperator {
+    Equal,
+    Greater,
+    Smaller,
+    NotEqual,
+}
+
+#[derive(Debug)]
+pub struct WhereClause {
+    pub col_name: String,
+    pub operator: WhereOperator,
+    pub expected_value: Literal,
+}
+
+enum SqlExpr {
+    WhereCondition(WhereClause),
+    Literal(Literal),
+}
 
 impl Engine {
-    fn run_expr(&self, left: Expr, right: Expr, op: Operator) -> Result<Literal, ()> {
+    fn parse_where(&self, ident: &str, op: &Operator, expected_val: Literal) -> WhereClause {
+        let clause_op = match op {
+            Operator::Equal => WhereOperator::Equal,
+            Operator::NotEqual => WhereOperator::NotEqual,
+            Operator::Smaller => WhereOperator::Smaller,
+            Operator::Greater => WhereOperator::Greater,
+            _ => panic!("invalid operator in where"),
+        };
+        WhereClause{col_name: ident.to_string(), operator: clause_op, expected_value: expected_val}
+    }
+    fn run_binary_expr(&self, left: &Expr, right: &Expr, op: &Operator) -> Result<SqlExpr, ()> {
         let mut left_val: Literal = Literal::Number(0);
         let mut right_val: Literal = Literal::Number(0);
+        match op {
+            Operator::Equal => { 
+                match &left {
+                    Expr::Binary {left: l, op: o, right: r} => {self.run_binary_expr(l, r, o)?;},
+                    Expr::Literal(_) => panic!("invalid use of literal"),
+                    Expr::Identifier(i) => {
+                        let where_cond = self.parse_where(i, &op, match right {
+                            Expr::Identifier(_) => panic!("invalid value in where, expcected 'literal'"),
+                            Expr::Binary {left: _, op: _, right: _} => panic!("invalid value in where, expected 'literal'"),
+                            Expr::Literal(l) => l.clone(),
+                        });
+                        return Ok(SqlExpr::WhereCondition(where_cond))
+                    },
+                }
+            },
+            Operator::NotEqual => { 
+                match &left {
+                    Expr::Binary {left: l, op: o, right: r} => {self.run_binary_expr(l, r, o)?;},
+                    Expr::Literal(_) => panic!("invalid use of literal"),
+                    Expr::Identifier(i) => {
+                        let where_cond = self.parse_where(i, &op, match right {
+                            Expr::Identifier(_) => panic!("invalid value in where, expcected 'literal'"),
+                            Expr::Binary {left: _, op: _, right: _} => panic!("invalid value in where, expected 'literal'"),
+                            Expr::Literal(l) => l.clone(),
+                        });
+                        return Ok(SqlExpr::WhereCondition(where_cond))
+                    },
+                }
+            },
+            Operator::Greater => { 
+                match &left {
+                    Expr::Binary {left: l, op: o, right: r} => {self.run_binary_expr(l, r, o)?;},
+                    Expr::Literal(_) => panic!("invalid use of literal"),
+                    Expr::Identifier(i) => {
+                        let where_cond = self.parse_where(i, &op, match right {
+                            Expr::Identifier(_) => panic!("invalid value in where, expcected 'literal'"),
+                            Expr::Binary {left: _, op: _, right: _} => panic!("invalid value in where, expected 'literal'"),
+                            Expr::Literal(l) => l.clone(),
+                        });
+                        return Ok(SqlExpr::WhereCondition(where_cond))
+                    },
+                }
+            },
+            Operator::Smaller => { 
+                match &left {
+                    Expr::Binary {left: l, op: o, right: r} => {self.run_binary_expr(l, r, o)?;},
+                    Expr::Literal(_) => panic!("invalid use of literal"),
+                    Expr::Identifier(i) => {
+                        let where_cond = self.parse_where(i, op, match right {
+                            Expr::Identifier(_) => panic!("invalid value in where, expcected 'literal'"),
+                            Expr::Binary {left: _, op: _, right: _} => panic!("invalid value in where, expected 'literal'"),
+                            Expr::Literal(l) => l.clone(),
+                        });
+                        return Ok(SqlExpr::WhereCondition(where_cond))
+                    },
+                }
+            },
+            Operator::Plus => {panic!("invalid use of '+' in where clause!")}
+        };
         match left {
-            Expr::Binary {left: ref l, op: ref o, right: ref r} => {self.run_expr(*l.clone(), *r.clone(), o.clone())?;},
+            Expr::Binary {left: l, op: o, right: r} => {self.run_binary_expr(l, r, o)?;},
             Expr::Literal(l) => left_val = l.clone(),
             Expr::Identifier(_) => panic!("TODO: resolve identifiers"),
         };
         match right {
-            Expr::Binary {left: ref l, op: o, right: ref r} => {self.run_expr(*l.clone(), *r.clone(), o)?;},
-            Expr::Literal(ref l) => right_val = l.clone(),
+            Expr::Binary {left: l, op: o, right: r} => {self.run_binary_expr(l, r, o)?;},
+            Expr::Literal(l) => right_val = l.clone(),
             Expr::Identifier(_) => panic!("TODO: resolve identifiers"),
         };
         let mut val_n: i32 = 0;
@@ -45,11 +131,12 @@ impl Engine {
                     Literal::String(sr) => {string = true; val_s.push_str(&sl); val_s.push_str(&sr)},
                 },
             }
+            _ => panic!("invalid use of operator")
         };
         if string {
-            Ok(Literal::String(val_s))
+            Ok(SqlExpr::Literal(Literal::String(val_s)))
         } else {
-            Ok(Literal::Number(val_n))
+            Ok(SqlExpr::Literal(Literal::Number(val_n)))
         }
     }
     pub fn run(&self, db: &mut DB) -> Result<QueryResult, Box<dyn std::error::Error>> {
@@ -60,17 +147,20 @@ impl Engine {
         match statment {
             Statement::Insert(i) => {
                 let mut field_to_insert: Vec<DBField> = vec![];
-                for val in i.values.clone() {
+                for val in &i.values {
                     match val {
                         Expr::Literal(l) => match l {
-                            Literal::String(s) => field_to_insert.push(DBField::Text(s)),
-                            Literal::Number(n) => field_to_insert.push(DBField::Int(n)),
+                            Literal::String(s) => field_to_insert.push(DBField::Text(s.to_string())),
+                            Literal::Number(n) => field_to_insert.push(DBField::Int(*n)),
                         },
-                        Expr::Binary{left: ref l, op: ref o, right: r} => {
-                            match self.run_expr(*l.clone(), *r.clone(), o.clone()) {
-                                Ok(l) => match l {
-                                    Literal::String(s) => field_to_insert.push(DBField::Text(s)),
-                                    Literal::Number(n) => field_to_insert.push(DBField::Int(n)),
+                        Expr::Binary{left: l, op: o, right: r} => {
+                            match self.run_binary_expr(l, r, o) {
+                                Ok(ex) => match ex {
+                                    SqlExpr::Literal(l) => match l {
+                                        Literal::String(s) => field_to_insert.push(DBField::Text(s)),
+                                        Literal::Number(n) => field_to_insert.push(DBField::Int(n)),
+                                    },
+                                    SqlExpr::WhereCondition(_) => panic!("unexpected where in isert statment"),
                                 },
                                 Err(_) => panic!("Expr parsing error"),
                             };
@@ -78,20 +168,41 @@ impl Engine {
                         Expr::Identifier(_) => panic!("TODO: resolve identifiers")
                     }
                 }
-
-                db.insert(i.columns.clone(), field_to_insert)?;
+                match &i.columns {
+                    Some(s) => db.insert(Option::Some(s.iter().map(|cs| cs.as_str()).collect()), field_to_insert)?,
+                    None => db.insert(Option::None, field_to_insert)?,
+                }
                 return Ok(QueryResult::Empty)
             },
             Statement::Select(s) => {
-                match s.where_clause {
-                    None => match db.select_cols(s.columns.clone()) {
+                dbg!(&s);
+                let where_clauses = match &s.where_clause {
+                    None => match db.select_cols(s.columns.iter().map(|cs| cs.as_str()).collect()) {
                         Ok(r) => return Ok(QueryResult::Rows(r)),
-                        Err(_) => panic!("unkown error"),
+                        Err(_) => panic!("unkown error, TODO!"),
                     },
-                    Some(clause) => {}
-                }
+                    Some(clauses) => {
+                        clauses.iter().map(|cls| { 
+                            let res_expr = match cls {
+                                Expr::Binary{left: l, op, right: r} => self.run_binary_expr(l, r, op),
+                                Expr::Literal(_) => panic!("lone literals not premited in where condition"),
+                                Expr::Identifier(_) => panic!("lone identifiers not premited in where condition"),
+                            };
+                            match res_expr {
+                                Ok(expr) => match expr {
+                                    SqlExpr::WhereCondition(wc) => wc,
+                                    SqlExpr::Literal(_) => panic!("unexpected literal instead of condition in where"),
+                                },
+                                Err(e) => panic!("TODO: add error on error within expr"),
+                            }
+                        }).collect()
+                    },              
+                };
+                match db.select_where(s.columns.clone(), where_clauses) {
+                    Ok(r) => {return Ok(QueryResult::Rows(r))},
+                    Err(_) => panic!("unkown error, TODO!"),
+                };
             }
         }
     }
-
 }
