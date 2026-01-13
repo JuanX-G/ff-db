@@ -145,7 +145,7 @@ impl Engine {
         };
         Err(Box::new(EngineError::UnexpectedState))
     }
-    pub fn run(&self, db: &mut DB) -> Result<QueryResult, Box<dyn std::error::Error>> {
+    pub fn run(&self, db: &mut Table) -> Result<QueryResult, Box<dyn std::error::Error>> {
         let statment = match &self.ast_root.first_node {
             ASTNode::Statment(s) => s,
             _ => panic!("TODO: add error on missing statment"),

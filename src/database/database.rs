@@ -1,11 +1,43 @@
 use itertools::Itertools;
-use std::fs::{File};
+use std::fs::{File, read_dir};
 use std::path::Path;
 use std::io::{Read, Seek, SeekFrom, Write};
+use std::env;
 
 use crate::sql::ast::Literal;
 use crate::sql::engine::{WhereClause, WhereOperator};
 use crate::database::errors::DBError;
+
+#[derive(Debug)]
+pub struct DB {
+    tables: Vec<Table>,
+}
+
+
+impl DB {
+    pub fn open(dir_name: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let path = Path::new(dir_name);
+        let dir_itr = read_dir(path)?;
+        env::set_current_dir(path);
+        let mut db: DB = DB {tables: vec![]};
+        for entry in dir_itr {
+            if let Ok(entry) = entry {
+                let tab = Table::new(&match entry.file_name().into_string() {
+                    Ok(s) => s,
+                    Err(_) => return Err(Box::new(DBError::GenericLoadingError)),
+                })?;
+                db.tables.push(tab);
+            }
+        };
+        Ok(db)        
+    }
+    pub fn get_mut_table(&mut self, table_name: &str) -> Option<&mut Table> {
+            for tb in self.tables.iter_mut() {
+                if tb.name == table_name {return Some(tb)}
+            }
+            None
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum DBField {
@@ -51,15 +83,16 @@ impl DataTypes {
 }
 
 #[derive(Debug)]
-pub struct DB {
+pub struct Table {
+    name: String,
     file: File,
     header: Vec<DBColumn>,
     entries: Vec<Vec<DBField>>,
 }
 
 
-impl DB {
-    pub fn load_db(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+impl Table {
+    pub fn load_table(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         self.file.seek(SeekFrom::Start(0))?;
         let mut contents = String::new();
         let _ = self.file.read_to_string(&mut contents);
@@ -110,8 +143,8 @@ impl DB {
             Ok(f) => f,
             Err(e) => panic!("{}", e)
         };  
-        let mut ret_db = DB{file: f, header: vec![], entries: vec![vec![]]};
-        match ret_db.load_db() {
+        let mut ret_db = Table{name: file_name.to_string(), file: f, header: vec![], entries: vec![vec![]]};
+        match ret_db.load_table() {
             Ok(_) => (),
             Err(e) => return Err(Box::new(DBError::FileError(e))),
         }

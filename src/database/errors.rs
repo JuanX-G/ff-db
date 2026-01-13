@@ -7,6 +7,7 @@ use crate::database::database::{DBField, DataTypes};
 pub enum DBError {
     ColumnNotFound(Vec<String>),
     FileError(Box<dyn std::error::Error>),
+    GenericLoadingError,
     MalformedInsertInput,
     MistypedInsertInput(DBField, DataTypes),
     InvalidComparasion,
@@ -40,6 +41,7 @@ impl fmt::Display for DBError {
                     out_s
             },
         DBError::InvalidComparasion => "Invalid comparsion was made".to_string(),
+        DBError::GenericLoadingError => "Error loading the db".to_string(),
         })
     }
 }
