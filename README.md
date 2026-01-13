@@ -1,6 +1,6 @@
 # ff-db a simple, flat-file database for all your simple data storage needs
 ## Features
- * A sql engine; currently supports: 'WHERE', 'SELECT', 'INSERT', 'AND' keywords, \
+ * A sql engine; currently supports: 'WHERE', 'SELECT', 'INSERT', 'AND' keywords
     - as well as'!=', '=', '<', '>' inside of where clauses 
  * A csv-like database format with column typing and names 
 
