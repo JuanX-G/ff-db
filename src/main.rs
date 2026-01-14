@@ -14,7 +14,7 @@ fn main() {
         Some(tb) => tb,
         None => panic!("did not find table"),
     };
-    let sql_s = "SELECT name FROM users WHERE num > 1";
+    let sql_s = "SELECT name FROM users WHERE num > 3 OR name = 'bob'";
     let mut lx = sql::lexer::Lexer {
         input: sql_s.chars().peekable(),
         prev_token: SqlToken::EOF,

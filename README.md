@@ -7,8 +7,8 @@
 ## Planned features
  * expanding the sql engine, especially support for the 'OR' and 'LIKE' keywords. 
  * UX improvments    
-    - A integration guide 
-    - A scaffolding script 
+    - An integration guide 
+    - An scaffolding script 
     - Completing the error handling 
     - Public API for the DB object if tighter integration is desired 
     - A binary communication endpoint 

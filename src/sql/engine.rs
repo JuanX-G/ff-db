@@ -101,14 +101,25 @@ impl Engine {
                     Operator::Equal
                         | Operator::NotEqual
                         | Operator::Greater
-                        | Operator::Smaller 
-                        | Operator::And
-                        | Operator::Or => {
+                        | Operator::Smaller => {
                             let l = self.eval_value(left, row, header)?;
                             let r = self.eval_value(right, row, header)?;
 
                             Ok(compare(&l, &r, op)?)
                         }
+                    Operator::And => {
+                        Ok(
+                            self.eval_expr(left, row, header)? &&
+                            self.eval_expr(right, row, header)?
+                        )
+                    }
+
+                    Operator::Or => {
+                        Ok(
+                            self.eval_expr(left, row, header)? ||
+                            self.eval_expr(right, row, header)?
+                        )
+                    }
                 }
             }
 

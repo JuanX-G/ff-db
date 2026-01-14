@@ -18,6 +18,47 @@ impl Parser {
     fn advance(&mut self) {
         self.pos += 1;
     }
+    fn parse_comparison(&mut self) -> Result<Expr, String> {
+        let left = self.parse_primary()?;
+
+        if let SqlToken::Operator(op @ (
+                Operator::Equal |
+                Operator::NotEqual |
+                Operator::Greater |
+                Operator::Smaller
+        )) = self.current() {
+            let op = op.clone();
+            self.advance();
+            let right = self.parse_primary()?;
+
+            Ok(Expr::Binary {
+                left: Box::new(left),
+                op,
+                right: Box::new(right),
+            })
+        } else {
+            Ok(left)
+        }
+    }
+
+    fn parse_expr(&mut self) -> Result<Expr, String> {
+        let mut left = self.parse_comparison()?;
+
+        while let SqlToken::Operator(op @ (Operator::And | Operator::Or)) = self.current() {
+            let op = op.clone();
+            self.advance();
+            let right = self.parse_comparison()?;
+
+            left = Expr::Binary {
+                left: Box::new(left),
+                op,
+                right: Box::new(right),
+            };
+        }
+
+        Ok(left)
+    }
+
 
     fn expect(&mut self, expected: SqlToken) -> Result<(), String> {
         if *self.current() == expected {
@@ -58,25 +99,6 @@ impl Parser {
             }
             token => Err(format!("Expected identifier, found {:?}", token)),
         }
-    }
-
-    fn parse_expr(&mut self) -> Result<Expr, String> {
-        let mut left = self.parse_primary()?;
-
-        while let SqlToken::Operator(op) = self.current() {
-            let op = op.clone();
-            self.advance();
-
-            let right = self.parse_primary()?;
-
-            left = Expr::Binary {
-                left: Box::new(left),
-                op,
-                right: Box::new(right),
-            };
-        }
-
-        Ok(left)
     }
 
     fn parse_primary(&mut self) -> Result<Expr, String> {

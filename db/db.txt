@@ -1,5 +1,7 @@
 num: INT, name: TEXT
-1, guy
+1, bob
 2, bro
 3, gal
+4, bob
+5, brah
 
