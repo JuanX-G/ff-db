@@ -4,8 +4,8 @@ use std::path::Path;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::env;
 
+use crate::sql;
 use crate::sql::ast::Literal;
-use crate::sql::engine::{WhereClause, WhereOperator};
 use crate::database::errors::DBError;
 
 #[derive(Debug)]
@@ -56,7 +56,7 @@ impl DBField {
 #[derive(Debug, Clone, PartialEq)]
 pub struct DBColumn {
     dt_type: DataTypes,
-    name: String,
+    pub name: String,
 }
 impl DBColumn {
     fn to_file_string(&self) -> String {
@@ -84,7 +84,7 @@ impl DataTypes {
 
 #[derive(Debug)]
 pub struct Table {
-    name: String,
+    pub name: String,
     file: File,
     header: Vec<DBColumn>,
     entries: Vec<Vec<DBField>>,
@@ -196,7 +196,7 @@ impl Table {
         self.write_to_file()?;
         Ok(())
     }
-    pub fn select_cols(&self, cols: Vec<&str>) -> Result<Vec<Vec<DBField>>, ()> {
+    pub fn select_cols(&self, cols: Vec<&str>) -> Result<Vec<Vec<DBField>>, Box<dyn std::error::Error>> {
         let mut col_idx = vec![];
         let mut found = false;
         for (idx, col) in self.header.iter().enumerate() {
@@ -208,7 +208,7 @@ impl Table {
             }
         }
         if !found {
-            return Err(())
+            return Err(Box::new(DBError::ColumnNotFound(cols.iter().map(|col| col.to_string()).collect())))
         }
         let mut max_i = 0;
         for i in &col_idx {
@@ -225,63 +225,55 @@ impl Table {
         }
         Ok(out_vec)
     }
-    pub fn select_where(&self, cols: Vec<String>, where_clauses: Vec<WhereClause>) -> 
-        Result<Vec<Vec<DBField>>, Box<dyn std::error::Error>> {
-            let mut col_idx = vec![];
-            let mut found = false;
-            for (idx, col) in self.header.iter().enumerate() {
-                for col_requested in &cols {
-                    if *col_requested == col.name {
-                        col_idx.push(idx);
-                        found = true;
-                    }
+    pub fn select_where(
+        &self,
+        cols: Vec<String>,
+        where_exprs: &[sql::ast::Expr],
+        engine: &sql::engine::Engine,
+    ) -> Result<Vec<Vec<DBField>>, Box<dyn std::error::Error>> {
+        let mut col_idx = vec![];
+        let mut found = false;
+        for (idx, col) in self.header.iter().enumerate() {
+            for col_requested in &cols {
+                if *col_requested == col.name {
+                    col_idx.push(idx);
+                    found = true;
                 }
             }
-            if !found {
-                return Err(Box::new(DBError::ColumnNotFound(cols)))
-            }
-            let mut max_i = 0;
-            for i in &col_idx {
-                if *i > max_i {max_i = *i}
-            }
-            let mut out_vec = vec![vec![]];
-            for row in &self.entries {
-                if max_i > row.len() {
-                    continue;
-                }
-                let mut row_vec = vec![];
-                let mut wc_satisfied = true;
-                for wc in &where_clauses {
-                    let col_idx = self.header.iter().position(|c| c.name == wc.col_name)
-                        .ok_or(DBError::ColumnNotFound(vec![wc.col_name.clone()]))?;
-                    let field = &row[col_idx];
-
-                    let clause_ok = match (&wc.operator, &wc.expected_value, field) {
-                        (WhereOperator::Equal, Literal::String(s), DBField::Text(t)) => t == s,
-                        (WhereOperator::Equal, Literal::Number(n), DBField::Int(i)) => i == n,
-                        (WhereOperator::NotEqual, Literal::String(s), DBField::Text(t)) => t != s,
-                        (WhereOperator::NotEqual, Literal::Number(n), DBField::Int(i)) => i != n,
-                        (WhereOperator::Greater, Literal::Number(n), DBField::Int(i)) => i > n,
-                        (WhereOperator::Smaller, Literal::Number(n), DBField::Int(i)) => i < n,
-                        _ => return Err(Box::new(DBError::InvalidComparasion)),
-                    };
-                    if !clause_ok {
-                        wc_satisfied = false;
-                        break;
-                    }
-                }
-
-                if wc_satisfied {
-                    for idx in &col_idx {
-                        row_vec.push(row[*idx].clone());
-                    }
-                    out_vec.push(row_vec);
-                }
-
-            }
-            Ok(out_vec)
-
         }
+        if !found {
+            return Err(Box::new(DBError::ColumnNotFound(cols.iter().map(|col| col.to_string()).collect())))
+        }
+        let mut max_i = 0;
+        for i in &col_idx {
+            if *i > max_i {max_i = *i}
+        }
+        let mut out_vec = vec![vec![]];
+        for row in &self.entries {
+            if row.len() < max_i + 1 {continue;}
+            let mut satisfied = true;
+
+            for expr in where_exprs {
+                if !match engine.eval_expr(expr, row, &self.header) {
+                    Ok(b) => b,
+                    Err(e) => continue,
+                }{
+                    satisfied = false;
+                    break;
+                }
+            }
+
+            if satisfied {
+                let mut out_row = Vec::new();
+                for idx in &col_idx {
+                    out_row.push(row[*idx].clone());
+                }
+                out_vec.push(out_row);
+            }
+        }
+        Ok(out_vec)
+    }
+
     fn write_to_file(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let mut out_str = "".to_string();
         out_str.push_str(

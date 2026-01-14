@@ -10,12 +10,11 @@ use crate::database::database::DB;
 fn main() {
     println!("Hello, world!");
     let mut db = DB::open("./db").unwrap();
-    dbg!(&db);
     let tab = match db.get_mut_table("db.txt") {
         Some(tb) => tb,
         None => panic!("did not find table"),
     };
-    let sql_s = "SELECT name FROM users WHERE num != 1 AND num != 3 OR ";
+    let sql_s = "SELECT name FROM users WHERE num != 1 AND num != 2";
     let mut lx = sql::lexer::Lexer {
         input: sql_s.chars().peekable(),
         prev_token: SqlToken::EOF,
