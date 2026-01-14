@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt;
 
-use crate::database::database::{DBField, DataTypes};
+use crate::database::{DBField, DataTypes};
 
 #[derive(Debug)]
 pub enum DBError {
@@ -10,7 +10,7 @@ pub enum DBError {
     GenericLoadingError,
     MalformedInsertInput,
     MistypedInsertInput(DBField, DataTypes),
-    InvalidComparasion,
+    _InvalidComparasion,
 }
 impl fmt::Display for DBError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -40,7 +40,7 @@ impl fmt::Display for DBError {
                     out_s.push_str(&exp_type.to_file_string());
                     out_s
             },
-        DBError::InvalidComparasion => "Invalid comparsion was made".to_string(),
+        DBError::_InvalidComparasion => "Invalid comparsion was made".to_string(),
         DBError::GenericLoadingError => "Error loading the db".to_string(),
         })
     }

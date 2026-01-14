@@ -1,4 +1,5 @@
 num: INT, name: TEXT
+0, brunonowskinson
 1, bob
 2, bro
 3, gal

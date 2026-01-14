@@ -1,7 +1,6 @@
 #[allow(unstable_name_collisions)]
 mod database;
 mod sql;
-use std::env::current_dir;
 use crate::sql::*;
 use crate::engine::Engine;
 use crate::database::database::DB;
@@ -14,7 +13,7 @@ fn main() {
         Some(tb) => tb,
         None => panic!("did not find table"),
     };
-    let sql_s = "SELECT name FROM users WHERE num > 3 OR name = 'bob'";
+    let sql_s = "SELECT name FROM users WHERE num > 3 OR name = 'bob' OR num = 0";
     let mut lx = sql::lexer::Lexer {
         input: sql_s.chars().peekable(),
         prev_token: SqlToken::EOF,

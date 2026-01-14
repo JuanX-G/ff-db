@@ -1,5 +1,5 @@
 use crate::{sql::{Operator, ast::{ASTNode, ASTRootWrapper, Expr, Literal, Statement}}};
-use crate::database::database::*;
+use crate::database::{DBColumn, DBField, table::Table};
 use std::fmt;
 use std::error::Error;
 
@@ -13,9 +13,6 @@ pub enum QueryResult {
     Empty,
 }
 
-enum SqlExpr {
-    Literal(Literal),
-}
 
 #[derive(Debug)]
 pub enum EngineError {
