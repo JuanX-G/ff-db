@@ -94,29 +94,27 @@ impl Engine {
     expr: &Expr,
     row: &[DBField],
     header: &[DBColumn],
-) -> Result<bool, EngineError> {
-    match expr {
-        Expr::Binary { left, op, right } => {
-            match op {
-                Operator::Equal
-                | Operator::NotEqual
-                | Operator::Greater
-                | Operator::Smaller => {
-                    let l = self.eval_value(left, row, header)?;
-                    let r = self.eval_value(right, row, header)?;
+    ) -> Result<bool, EngineError> {
+        match expr {
+            Expr::Binary { left, op, right } => {
+                match op {
+                    Operator::Equal
+                        | Operator::NotEqual
+                        | Operator::Greater
+                        | Operator::Smaller 
+                        | Operator::And
+                        | Operator::Or => {
+                            let l = self.eval_value(left, row, header)?;
+                            let r = self.eval_value(right, row, header)?;
 
-                    Ok(compare(&l, &r, op)?)
-                }
-
-                Operator::Plus => {
-                    Err(EngineError::InvalidOperatorInWhere(op.clone()))
+                            Ok(compare(&l, &r, op)?)
+                        }
                 }
             }
-        }
 
-        _ => Err(EngineError::UnexpectedExprExpectedExpression(expr.clone())),
+            _ => Err(EngineError::UnexpectedExprExpectedExpression(expr.clone())),
+        }
     }
-}
 
     fn eval_value(
     &self,
@@ -132,7 +130,7 @@ impl Engine {
 
             Expr::Identifier(name) => {
                 self.resolve_identifier(name, row, header)
-            }
+            },
 
             _ => Err(EngineError::UnexpectedExprExpectedLiteral(expr.clone())),
         }
@@ -173,10 +171,8 @@ impl Engine {
                         let r = db.select_cols(
                             s.columns.iter().map(|c| c.as_str()).collect()
                         );
-                        
                         Ok(QueryResult::Rows(r?))
                     }
-
                     Some(where_exprs) => {
                         let r = db.select_where(
                             s.columns.clone(),

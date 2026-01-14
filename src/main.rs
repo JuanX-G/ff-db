@@ -14,7 +14,7 @@ fn main() {
         Some(tb) => tb,
         None => panic!("did not find table"),
     };
-    let sql_s = "SELECT name FROM users WHERE num != 1 AND num != 2";
+    let sql_s = "SELECT name FROM users WHERE num > 1";
     let mut lx = sql::lexer::Lexer {
         input: sql_s.chars().peekable(),
         prev_token: SqlToken::EOF,
@@ -24,7 +24,9 @@ fn main() {
         Err(e) => panic!("{}", e),
     };
     let mut parser = sql::parser::Parser::new(tokens);
+    dbg!(&parser);
     let ast_root = parser.generate_ast();
+    dbg!(&ast_root);
     let ast_root = ast_root.unwrap();
     let e = Engine{ast_root: ast_root};
     let output = e.run(tab).unwrap();

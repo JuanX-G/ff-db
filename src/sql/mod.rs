@@ -25,7 +25,6 @@ pub enum SqlKeyword {
     Into,
     Values,
     Where,
-    And,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,7 +33,8 @@ pub enum Operator {
     NotEqual,
     Greater,
     Smaller,
-    Plus,
+    And,
+    Or,
 }
 
 impl Operator {
@@ -44,7 +44,8 @@ impl Operator {
             Operator::NotEqual => "Not Equal".to_string(),
             Operator::Greater => "Greater".to_string(),
             Operator::Smaller => "Smaller".to_string(),
-            Operator::Plus => "Plus".to_string(),
+            Operator::And => "And".to_string(),
+            Operator::Or => "Or".to_string(),
         }
     }
 

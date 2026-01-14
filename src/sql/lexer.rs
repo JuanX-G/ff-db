@@ -62,7 +62,8 @@ impl<'a> Lexer<'a> {
                         "INTO" => SqlToken::Keyword(SqlKeyword::Into),
                         "VALUES" => SqlToken::Keyword(SqlKeyword::Values),
                         "WHERE" => SqlToken::Keyword(SqlKeyword::Where),
-                        "AND" => SqlToken::Keyword(SqlKeyword::And),
+                        "AND" => SqlToken::Operator(Operator::And),
+                        "OR" => SqlToken::Operator(Operator::Or),
                         l => {if all_num {SqlToken::NumberLiteral(l.to_string())} else {SqlToken::Identifier(word)}},
                     };
 

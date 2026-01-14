@@ -110,15 +110,15 @@ impl Parser {
         let table = self.parse_identifier()?;
         let mut where_clauses: Vec<Expr> = vec![];
         loop {
-            let where_clause = if self.current() == &SqlToken::Keyword(SqlKeyword::Where) || 
-                self.current() == &SqlToken::Keyword(SqlKeyword::And) {
-                self.advance(); 
-                match self.parse_expr() {
-                    Ok(wc) => wc,
-                    Err(_s) => break,
-                }
-            } else {
-                break;
+            let where_clause = if self.current() == &SqlToken::Keyword(SqlKeyword::Where) ||
+                self.current() == &SqlToken::Operator(Operator::And) {
+                    self.advance(); 
+                    match self.parse_expr() {
+                        Ok(wc) => wc,
+                        Err(_s) => break,
+                    }
+                } else {
+                    break;
             };
             where_clauses.push(where_clause);
         }
