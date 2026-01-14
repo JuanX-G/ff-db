@@ -79,17 +79,6 @@ impl Parser {
 
         Ok(items)
     }
-    pub fn parse_statement(&mut self) -> Result<Statement, String> {
-        match self.current() {
-            SqlToken::Keyword(SqlKeyword::Select) => {
-                Ok(Statement::Select(self.parse_select()?))
-            }
-            SqlToken::Keyword(SqlKeyword::Insert) => {
-                Ok(Statement::Insert(self.parse_insert()?))
-            }
-            token => Err(format!("Unexpected token {:?}", token)),
-        }
-    }
     fn parse_identifier(&mut self) -> Result<String, String> {
         match self.current() {
             SqlToken::Identifier(name) => {

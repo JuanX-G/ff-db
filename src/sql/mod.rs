@@ -2,6 +2,7 @@ pub mod lexer;
 pub mod parser;
 pub mod ast;
 pub mod engine;
+pub mod errors;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SqlToken {

@@ -1,7 +1,6 @@
-use crate::{sql::{Operator, ast::{ASTNode, ASTRootWrapper, Expr, Literal, Statement}}};
+use crate::sql::{Operator, ast::{ASTNode, ASTRootWrapper, Expr, Literal, Statement}};
 use crate::database::{DBColumn, DBField, table::Table};
-use std::fmt;
-use std::error::Error;
+use crate::sql::errors::EngineError;
 
 #[derive(Debug)]
 pub struct Engine {
@@ -12,45 +11,6 @@ pub enum QueryResult {
     Rows(Vec<Vec<DBField>>),
     Empty,
 }
-
-
-#[derive(Debug)]
-pub enum EngineError {
-    InvalidOperatorInWhere(Operator),
-    UnexpectedExprExpectedLiteral(Expr),
-    UnexpectedExprExpectedIdentifier(Expr),
-    UnexpectedExprExpectedExpression(Expr),
-    UnexpectedState,
-}
-impl fmt::Display for EngineError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", match self {
-            EngineError::InvalidOperatorInWhere(op) => {
-                let mut out_s: String = "Invalid operator found on the right of a where statment, found '".to_string();
-                out_s.push_str(&op.to_string());
-                out_s.push_str("' expected '=' or '<' or '>' or '!='");
-                out_s
-            }
-            EngineError::UnexpectedExprExpectedLiteral(_expr) => {
-                let out_s: String = "Invalid expression found on the right of a where statment, expected 'literal' found '".to_string();
-                // TODO add proper string method on expr
-                out_s
-            }
-            EngineError::UnexpectedExprExpectedIdentifier(_expr) => {
-                let out_s: String = "Invalid expression found on the right of a where statment, expected 'identifier' found '".to_string();
-                // TODO add proper string method on expr
-                out_s
-            },
-            EngineError::UnexpectedExprExpectedExpression(_expr) => {
-                let out_s: String = "Invalid expression found in a where statment, expected 'Expression' found '".to_string();
-                // TODO add proper string method on expr
-                out_s
-            },
-            EngineError::UnexpectedState => "unexpected state encoutered".to_string(),
-        })
-    }
-}
-impl Error for EngineError {}
 
 fn compare(
     left: &DBField,
@@ -147,7 +107,6 @@ impl Engine {
     pub fn run(&self, db: &mut Table) -> Result<QueryResult, Box<dyn std::error::Error>> {
         let statment = match &self.ast_root.first_node {
             ASTNode::Statment(s) => s,
-            _ => panic!("TODO: add error on missing statment"),
         };
         match statment {
             Statement::Insert(i) => {

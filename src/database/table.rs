@@ -142,17 +142,11 @@ impl Table {
 
 }
 
-
 /* 
  * ### ### ###
- * 
- *
- * ### SEPARATOR FOR READABILITY
- *
- *
+ *    <###>
  * ### ### ###
  */
-
 
 impl Table {
     fn write_to_file(&mut self) -> Result<(), Box<dyn std::error::Error>> {
