@@ -7,7 +7,7 @@ pub mod table;
  *  Module holding all the constructs relating to the 'physical' database
  */
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DBField {
     Text(String),
     Int(i32),

@@ -7,6 +7,8 @@ use crate::ast::Expr;
 use crate::engine::Engine;
 use crate::database::errors::DBError;
 
+pub type DBResult<T> = Result<T, DBError>;
+
 #[derive(Debug)]
 pub struct Table {
     pub name: String,
@@ -16,7 +18,7 @@ pub struct Table {
 }
 
 impl Table {
-    pub fn insert(&mut self, col_names: Option<Vec<&str>>, mut row: Vec<DBField>) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn insert(&mut self, col_names: Option<Vec<&str>>, mut row: Vec<DBField>) -> DBResult<()> {
         let col_names = match col_names {
             Some(c) => c,
             _ => self.header.iter().map(|c| c.name.as_str()).collect(),
@@ -30,18 +32,18 @@ impl Table {
                     head_idx_to_use = head_idx;
                 }
             }
-            if !found {return Err(Box::new(DBError::ColumnNotFound(col_names.iter().map(|cn| cn.to_string()).collect())))};
+            if !found {return Err(DBError::ColumnNotFound(col_names.iter().map(|cn| cn.to_string()).collect()))};
 
             let field = match row.get(idx) {
                 Some(f) => f,
-                _ => return Err(Box::new(DBError::MalformedInsertInput)),
+                _ => return Err(DBError::MalformedInsertInput),
             };
             let head_col = &self.header[head_idx_to_use];
             match field {
                 DBField::Text(_) => {if head_col.dt_type == DataTypes::TEXT {continue;}}
                 DBField::Int(_) => {if head_col.dt_type == DataTypes::INT {continue;}}
             }
-            return Err(Box::new(DBError::MistypedInsertInput(field.clone(), head_col.dt_type.clone())))
+            return Err(DBError::MistypedInsertInput(field.clone(), head_col.dt_type.clone()))
         }
         for (head_idx, col) in self.header.iter().enumerate() {
             let mut covered = false;
@@ -59,10 +61,19 @@ impl Table {
         }
 
         self.entries.push(row);
-        self.write_to_file()?;
-        Ok(())
+        match self.write_to_file() {
+            Ok(_) => Ok(()),
+            Err(e) => Err(DBError::FileError(Box::new(e))),
+        }
     }
-    pub fn select_cols(&self, cols: Vec<&str>) -> Result<Vec<Vec<DBField>>, Box<dyn std::error::Error>> {
+    pub fn select_all_cols(&self) -> DBResult<Vec<Vec<DBField>>> {
+        let mut out_vec = vec![vec![]];
+        for row in &self.entries {
+            out_vec.push(row.clone());
+        }
+        Ok(out_vec)
+    }
+    pub fn select_cols(&self, cols: Vec<&str>) -> DBResult<Vec<Vec<DBField>>> { 
         let mut col_idx = vec![];
         let mut found = false;
         for (idx, col) in self.header.iter().enumerate() {
@@ -74,7 +85,7 @@ impl Table {
             }
         }
         if !found {
-            return Err(Box::new(DBError::ColumnNotFound(cols.iter().map(|col| col.to_string()).collect())))
+            return Err(DBError::ColumnNotFound(cols.iter().map(|col| col.to_string()).collect()))
         }
         let mut max_i = 0;
         for i in &col_idx {
@@ -96,7 +107,7 @@ impl Table {
         cols: Vec<String>,
         where_exprs: &[Expr],
         engine: &Engine,
-    ) -> Result<Vec<Vec<DBField>>, Box<dyn std::error::Error>> {
+    ) -> DBResult<Vec<Vec<DBField>>> {
         let mut col_idx = vec![];
         let mut found = false;
         for (idx, col) in self.header.iter().enumerate() {
@@ -108,7 +119,7 @@ impl Table {
             }
         }
         if !found {
-            return Err(Box::new(DBError::ColumnNotFound(cols.iter().map(|col| col.to_string()).collect())))
+            return Err(DBError::ColumnNotFound(cols.iter().map(|col| col.to_string()).collect()))
         }
         let mut max_i = 0;
         for i in &col_idx {
@@ -149,7 +160,7 @@ impl Table {
  */
 
 impl Table {
-    fn write_to_file(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    fn write_to_file(&mut self) -> DBResult<()> {
         let mut out_str = "".to_string();
         out_str.push_str(
             &self.header
@@ -171,20 +182,23 @@ impl Table {
         out_str.push_str("\n");
         match self.file.set_len(0) {
             Ok(_) => (),
-            Err(e) => return Err(Box::new(DBError::FileError(Box::new(e)))),
-        }
+            Err(e) => return Err(DBError::FileError(Box::new(e))),
+        } 
         match self.file.write(out_str.as_bytes()) {
             Ok(_) => (),
-            Err(e) => return Err(Box::new(DBError::FileError(Box::new(e)))),
+            Err(e) => return Err(DBError::FileError(Box::new(e))),
         }
         match self.file.flush() {
             Ok(_) => (),
-            Err(e) => return Err(Box::new(DBError::FileError(Box::new(e)))),
+            Err(e) => return Err(DBError::FileError(Box::new(e))),
         }
         Ok(())
     }
-    pub fn load_table(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        self.file.seek(SeekFrom::Start(0))?;
+    pub fn load_table(&mut self) -> DBResult<()> {
+        match self.file.seek(SeekFrom::Start(0)) {
+            Err(e) => return Err(DBError::FileError(Box::new(e))),
+            _ => (),
+        };
         let mut contents = String::new();
         let _ = self.file.read_to_string(&mut contents);
         let lines_itr = contents.split('\n');
@@ -194,12 +208,12 @@ impl Table {
                 for elem in line_split_itr {
                     let (name, dt_type) = match elem.split_once(":") {
                         Some(s) => s,
-                        _ => panic!("no type for column"),
+                        _ => return Err(DBError::GenericLoadingError)
                     };
                     let dt_type = match dt_type.trim() {
                         "TEXT" => DataTypes::TEXT,
                         "INT" => DataTypes::INT,
-                        _ => panic!("invalid data type"),
+                        _ => return Err(DBError::GenericLoadingError),
                     };
                     let to_push: DBColumn = DBColumn {dt_type: dt_type, name: name.trim().to_string()};
                     self.header.push(to_push);
@@ -217,7 +231,7 @@ impl Table {
                 } else if self.header[*idxb].dt_type == DataTypes::INT {
                     let field_to_add = DBField::Int(match elem.parse::<i32>() {
                         Ok(i) => i,
-                        Err(e) => {return Err(Box::new(e))},
+                        Err(e) => {return Err(DBError::FileError(Box::new(e)))},
                     });
                     line_vec.push(field_to_add);
                 } 
@@ -228,16 +242,16 @@ impl Table {
         }
         Ok(())
     }
-    pub fn new(file_name: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(file_name: &str) -> DBResult<Self> {
         let path = Path::new(file_name);
         let f = match File::options().append(true).read(true).open(path) {
             Ok(f) => f,
-            Err(e) => panic!("{}", e)
+            Err(e) => return Err(DBError::FileError(Box::new(e)))
         };  
         let mut ret_db = Table{name: file_name.to_string(), file: f, header: vec![], entries: vec![vec![]]};
         match ret_db.load_table() {
             Ok(_) => (),
-            Err(e) => return Err(Box::new(DBError::FileError(e))),
+            Err(e) => return Err(DBError::FileError(Box::new(e))),
         }
         Ok(ret_db)
     }

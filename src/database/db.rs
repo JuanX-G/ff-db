@@ -33,6 +33,9 @@ impl DB {
             }
             None
     }
+    pub fn get_table_count(&self) -> usize {
+        self.tables.len()
+    }
 }
 
 

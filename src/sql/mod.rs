@@ -38,6 +38,7 @@ pub enum Operator {
     Or,
 }
 
+/*
 impl Operator {
     fn to_string(&self) -> String {
         match self {
@@ -49,8 +50,8 @@ impl Operator {
             Operator::Or => "Or".to_string(),
         }
     }
-
 }
+*/
 
 
 

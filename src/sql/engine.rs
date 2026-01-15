@@ -3,20 +3,24 @@ use crate::database::{DBColumn, DBField, table::Table};
 use crate::sql::errors::EngineError;
 
 #[derive(Debug)]
-pub struct Engine {
-    pub ast_root: ASTRootWrapper,
-}
-#[derive(Debug)]
 pub enum QueryResult {
     Rows(Vec<Vec<DBField>>),
     Empty,
 }
 
-fn compare(
+pub type EngineResult<T> = Result<T, EngineError>;
+
+///
+/// # compares two fields according to the 'op' operator 
+///
+/// # Errors
+///
+/// EngineError on issues
+pub fn compare(
     left: &DBField,
     right: &DBField,
     op: &Operator,
-) -> Result<bool, EngineError> {
+    ) -> EngineResult<bool> {
     match (left, right, op) {
         (DBField::Int(a), DBField::Int(b), Operator::Equal) => Ok(a == b),
         (DBField::Int(a), DBField::Int(b), Operator::NotEqual) => Ok(a != b),
@@ -25,18 +29,36 @@ fn compare(
 
         (DBField::Text(a), DBField::Text(b), Operator::Equal) => Ok(a == b),
         (DBField::Text(a), DBField::Text(b), Operator::NotEqual) => Ok(a != b),
-
         _ => Err(EngineError::UnexpectedState),
     }
 }
 
+///
+/// # The struct for evaluating an ast
+///
+/// ast_root wraps the first statment of sql, that is to be walked and run
+///
+/// # Errors
+///
+/// Methods, in general, return EngineError on failure
+#[derive(Debug)]
+pub struct Engine {
+    pub ast_root: ASTRootWrapper,
+}
+
 impl Engine {
+    /// resolves, from a provided header, the coresponding DBField
+    ///
+    /// # Errors
+    ///
+    /// Returns EngineError wrraped in a Result, uses the Ok variant on succes
+    /// The EngineError being described in the errors sub module
     fn resolve_identifier(
         &self,
         name: &str,
         row: &[DBField],
         header: &[DBColumn],
-    ) -> Result<DBField, EngineError> {
+    ) -> EngineResult<DBField> {
         let idx = header
             .iter()
             .position(|c| c.name == name)
@@ -45,13 +67,18 @@ impl Engine {
         Ok(row[idx].clone())
     }
 
-
+    /// Evaluates a logical expression
+    ///
+    /// # Errors
+    ///
+    /// Returns EngineError wrraped in a Result, uses the Ok variant on succes
+    /// The EngineError being described in the errors sub module
     pub fn eval_expr(
         &self,
-    expr: &Expr,
-    row: &[DBField],
-    header: &[DBColumn],
-    ) -> Result<bool, EngineError> {
+        expr: &Expr,
+        row: &[DBField],
+        header: &[DBColumn],
+    ) -> EngineResult<bool> {
         match expr {
             Expr::Binary { left, op, right } => {
                 match op {
@@ -70,7 +97,6 @@ impl Engine {
                             self.eval_expr(right, row, header)?
                         )
                     }
-
                     Operator::Or => {
                         Ok(
                             self.eval_expr(left, row, header)? ||
@@ -79,17 +105,22 @@ impl Engine {
                     }
                 }
             }
-
             _ => Err(EngineError::UnexpectedExprExpectedExpression(expr.clone())),
         }
     }
 
+    /// Evaluates a value --- a name or a literal 
+    ///
+    /// # Errors
+    ///
+    /// Returns EngineError wrraped in a Result, uses the Ok variant on succes
+    /// The EngineError being described in the errors sub module
     fn eval_value(
     &self,
     expr: &Expr,
     row: &[DBField],
     header: &[DBColumn],
-    ) -> Result<DBField, EngineError> {
+    ) -> EngineResult<DBField> {
         match expr {
             Expr::Literal(l) => Ok(match l {
                 Literal::String(s) => DBField::Text(s.clone()),
@@ -104,6 +135,13 @@ impl Engine {
         }
     }
 
+    /// Evaluates the AST
+    ///
+    /// # Errors
+    ///
+    /// Returns a boxed error, usually an EngineError. The EngineError being 
+    /// described the errors sub-module.
+    /// also possible are database based errors.
     pub fn run(&self, db: &mut Table) -> Result<QueryResult, Box<dyn std::error::Error>> {
         let statment = match &self.ast_root.first_node {
             ASTNode::Statment(s) => s,
@@ -150,7 +188,6 @@ impl Engine {
                     }
                 }
             }
-
         }
     }
 }

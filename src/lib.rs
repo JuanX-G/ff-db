@@ -2,6 +2,7 @@
 
 pub mod database;
 pub mod sql;
+pub mod tests;
 
 pub use database::db::*;
 pub use database::table::*;
