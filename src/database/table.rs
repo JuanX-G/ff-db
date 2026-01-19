@@ -244,7 +244,6 @@ impl Table {
             }
             self.entries.push(line_vec);
         }
-        dbg!(&self.entries);
         Ok(())
     }
     pub fn new(file_name: &str) -> DBResult<Self> {

@@ -1,13 +1,11 @@
 use std::fs::{OpenOptions, create_dir, exists};
 use std::path::Path;
 use std::io::Write;
-use std::env::current_dir;
 use crate::database::{DBField, db};
 use super::constants::*;
 
 fn setup_mock_db() {
     let db_dir_path = Path::new(TEST_DB_PATH);
-    dbg!(db_dir_path);
     if !exists(db_dir_path).unwrap() {
         create_dir(db_dir_path).unwrap();
     }
