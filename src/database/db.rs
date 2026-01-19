@@ -17,13 +17,13 @@ impl DB {
         env::set_current_dir(path)?;
         let mut db: DB = DB {tables: vec![]};
         for entry in dir_itr {
-            if let Ok(entry) = entry {
-                let tab = Table::new(&match entry.file_name().into_string() {
-                    Ok(s) => s,
-                    Err(_) => return Err(Box::new(DBError::GenericLoadingError)),
-                })?;
-                db.tables.push(tab);
-            }
+            let entry = entry?;
+            if entry.metadata()?.is_dir() {continue;}
+            let string = match entry.file_name().into_string() {
+                Ok(s) => s.to_string(),
+                Err(_) => continue,
+            };
+            db.tables.push(Table::new(&string)?);
         };
         Ok(db)        
     }

@@ -199,10 +199,15 @@ impl Table {
             Err(e) => return Err(DBError::FileError(Box::new(e))),
             _ => (),
         };
+        self.entries.clear();
+        self.header.clear();
         let mut contents = String::new();
         let _ = self.file.read_to_string(&mut contents);
         let lines_itr = contents.split('\n');
         for (ref mut idx, line) in lines_itr.enumerate() {
+            if line.trim().is_empty() {
+                continue;
+            }
             if *idx == 0 {
                 let line_split_itr = line.split(',');
                 for elem in line_split_itr {
@@ -223,6 +228,7 @@ impl Table {
             }
             let line_split = line.split(',');
             if line_split.clone().count() <= 1 {continue;}
+
             let mut line_vec: Vec<DBField> = vec![];
             for (ref mut idxb, elem) in line_split.enumerate() {
                 if self.header[*idxb].dt_type == DataTypes::TEXT {
@@ -235,11 +241,10 @@ impl Table {
                     });
                     line_vec.push(field_to_add);
                 } 
-                *idxb += 1;
             }
             self.entries.push(line_vec);
-            *idx += 1;
         }
+        dbg!(&self.entries);
         Ok(())
     }
     pub fn new(file_name: &str) -> DBResult<Self> {
