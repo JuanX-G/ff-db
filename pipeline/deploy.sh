@@ -11,17 +11,6 @@ CURRENT_LINK="$BASE_DIR/latest"
 
 echo "Deploying $PROJECT release $TAG"
 
-# sanity checks
-if [[ ! -d dist ]]; then
-  echo "dist/ not found — did build fail?"
-  exit 1
-fi
-
-if [[ -z "$(ls -A dist)" ]]; then
-  echo "dist/ is empty — refusing to deploy"
-  exit 1
-fi
-
 # create release dir on Pi
 ssh "$PI_HOST" "mkdir -p '$RELEASE_DIR'"
 
