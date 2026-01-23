@@ -27,7 +27,7 @@ ssh "$PI_HOST" "mkdir -p '$RELEASE_DIR'"
 
 # upload artifacts
 rsync -avz --delete \
-  dist/ \
+  src/ \
   "$PI_HOST:$RELEASE_DIR/"
 
 # atomically update 'latest' symlink
