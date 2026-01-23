@@ -1,7 +1,7 @@
 use std::fs::{read_dir};
 use std::path::Path;
 use std::env;
-use crate::database::{table::Table, errors::DBError};
+use crate::database::{table::Table};
 
 /* Datebase is the struct holding tables. */
 

@@ -1,8 +1,10 @@
 use std::fs::{OpenOptions, create_dir, exists};
 use std::path::Path;
 use std::io::Write;
+use crate::{Expr, Operator, SelectStatement, Table, engine};
 use crate::database::{DBField, db};
 use super::constants::*;
+use crate::Literal;
 
 fn setup_mock_db() {
     let db_dir_path = Path::new(TEST_DB_PATH);
@@ -45,4 +47,23 @@ fn test_db_insert_to_all(db: &mut db::DB) {
     setup_mock_db();
     let table = db.get_mut_table(TEST_TABLE_NAME).unwrap();
     assert_eq!(table.insert(Option::None, vec![DBField::Int(1), DBField::Text("alice".to_string())]).unwrap(), ());
+    test_db_inserted_correctly(table);
 }
+
+fn test_db_inserted_correctly(table: &mut Table) {
+    let w_expr = Expr::Binary{
+        left: Box::new(Expr::Identifier("id".to_string())), 
+        op: Operator::Equal, 
+        right: Box::new(Expr::Literal(Literal::Number(1)))};
+
+    let s_statmen = SelectStatement{columns: vec!["name".to_string()], table: "users".to_string(), where_clause: Option::Some(vec![w_expr.clone()])};
+    let eng = engine::Engine{ast_root: crate::ASTRootWrapper { first_node: crate::ASTNode::Statment(crate::Statement::Select(s_statmen)) }};
+    let res = table.select_where(vec!["id".to_string(), "name".to_string()], &vec![w_expr.clone()], &eng).unwrap();
+
+    if res.len() < 2 {
+        dbg!(res);
+        panic!("wrong amount of rows returned")
+    }
+    assert_eq!(res[1], vec![DBField::Int(1), DBField::Text("Alice".to_string())])
+}
+
