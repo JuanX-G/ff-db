@@ -39,13 +39,13 @@ impl<'a> Lexer<'a> {
                     tokens.push(SqlToken::StringLiteral(s));
                 }
 
-                c if c.is_alphanumeric() => {
+                c if c.is_alphanumeric() || c == '_' => {
                     let mut word = String::new();
                     word.push(c);
                     
                     let mut all_num = c.is_ascii_digit();
                     while let Some(next) = self.input.peek() {
-                        if !next.is_alphanumeric() {
+                        if !next.is_alphanumeric() && *next != '_' {
                             break;
                         }
                         if next.is_ascii_digit() == false && all_num == true{

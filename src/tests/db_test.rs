@@ -22,6 +22,7 @@ fn test_db() {
     setup_mock_db();
     let mut db = db::DB::open(TEST_DB_PATH).unwrap();
     assert_eq!(db.get_table_count(), 1);
+    dbg!(&db);
     println!("#Test# table count correct");
     
     test_db_content_integrity(&mut db);

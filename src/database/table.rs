@@ -204,11 +204,12 @@ impl Table {
         let mut contents = String::new();
         let _ = self.file.read_to_string(&mut contents);
         let lines_itr = contents.split('\n');
+        let mut parsed_header = false;
         for (ref mut idx, line) in lines_itr.enumerate() {
             if line.trim().is_empty() {
                 continue;
             }
-            if *idx == 0 {
+            if !parsed_header { 
                 let line_split_itr = line.split(',');
                 for elem in line_split_itr {
                     let (name, dt_type) = match elem.split_once(":") {
@@ -224,6 +225,7 @@ impl Table {
                     self.header.push(to_push);
                 }
                 *idx += 1;
+                parsed_header = true;
                 continue;
             }
             let line_split = line.split(',');
@@ -252,7 +254,9 @@ impl Table {
             Ok(f) => f,
             Err(e) => return Err(DBError::FileError(Box::new(e)))
         };  
-        let mut ret_db = Table{name: file_name.to_string(), file: f, header: vec![], entries: vec![vec![]]};
+        
+        let tb_name = file_name.split(".").nth(0).unwrap();
+        let mut ret_db = Table{name: tb_name.to_string(), file: f, header: vec![], entries: vec![vec![]]};
         match ret_db.load_table() {
             Ok(_) => (),
             Err(e) => return Err(DBError::FileError(Box::new(e))),

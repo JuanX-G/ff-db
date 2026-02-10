@@ -15,6 +15,7 @@ impl DB {
         let path = Path::new(dir_name);
         let dir_itr = read_dir(path)?;
         env::set_current_dir(path)?;
+        dbg!(env::current_dir()?);
         let mut db: DB = DB {tables: vec![]};
         for entry in dir_itr {
             let entry = entry?;

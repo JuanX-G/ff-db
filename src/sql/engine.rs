@@ -1,4 +1,4 @@
-use crate::sql::{Operator, ast::{ASTNode, ASTRootWrapper, Expr, Literal, Statement}};
+use crate::{database, sql::{Operator, ast::{ASTNode, ASTRootWrapper, Expr, Literal, Statement}}};
 use crate::database::{DBColumn, DBField, table::Table};
 use crate::sql::errors::EngineError;
 
@@ -142,10 +142,7 @@ impl Engine {
     /// Returns a boxed error, usually an EngineError. The EngineError being 
     /// described the errors sub-module.
     /// also possible are database based errors.
-    pub fn run(&self, db: &mut Table) -> Result<QueryResult, Box<dyn std::error::Error>> {
-        let statment = match &self.ast_root.first_node {
-            ASTNode::Statment(s) => s,
-        };
+    pub fn run_on_table(&self, db: &mut Table, statment: &Statement) -> Result<QueryResult, Box<dyn std::error::Error>> {
         match statment {
             Statement::Insert(i) => {
                 let mut field_to_insert: Vec<DBField> = vec![];
@@ -189,5 +186,25 @@ impl Engine {
                 }
             }
         }
+    }
+    pub fn run(&self, mut db: database::db::DB) -> Result<QueryResult, Box<dyn std::error::Error>> {
+        let statment = match &self.ast_root.first_node {
+            ASTNode::Statment(s) => s,
+        };
+        let tb = match statment {
+            Statement::Insert(is) => {
+                match db.get_mut_table(&is.table) {
+                    Some(tb) => tb,
+                    None => return Err(Box::new(EngineError::UnexpectedState)), // add no such table error 
+                }
+            },
+            Statement::Select(ss) => {
+                match db.get_mut_table(&ss.table) {
+                    Some(tb) => tb,
+                    None => return Err(Box::new(EngineError::UnexpectedState)), // add no such table error 
+                }
+            },
+        };
+        self.run_on_table(tb, statment)
     }
 }
