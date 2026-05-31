@@ -27,6 +27,17 @@ Your SQL commands move through a classic data pipeline before modifying state on
 3. **Evaluation Engine (`Engine`)**: Inspects runtime database fields, confirms type matches, evaluates conditional filtering logic (`WHERE`), and executes operations against active tables.
 
 ---
+## SQL Language Support Matrix
+
+| Clause / Keyword | Target / Operator | Status | Description |
+| :--- | :--- | :--- | :--- |
+| `SELECT` | Column Projections |  Supported | Extracts specific columns from records |
+| `INSERT INTO` | Value Insertion |  Supported | Appends rows with automatic default fill-ins |
+| `WHERE` | Filtering Logic |  Supported | Conditionally filters target datasets |
+| `AND` | Logical Intersection |  Supported | Combines multiple condition states together |
+| `OR`, `LIKE` | Advanced Matchers | ⏳ Planned | Extended conditional matching capabilities |
+| `=`, `!=` | Equality Filters |  Supported | Text and Integer equivalence operations |
+| `<`, `>` | Range Boundaries |  Supported | Strict value comparisons bounds for `INT` types |
 
 ## Storage Format
 
